@@ -246,6 +246,8 @@
 		hRenderGame: function( e ){
 			var delta = e.delta;
 			
+			var playerRelPos;
+			
 			/**
 			*	Player's movement based on Arrow keys
 			*/
@@ -285,6 +287,18 @@
 					enemy.o.gotoAndStop( enemy.look.up );
 				}else{
 					enemy.o.gotoAndStop( enemy.look.down );
+				}
+			}
+			
+			
+			/**
+			*	Player and Enemy Collision Detection
+			*/
+			if ( player && enemy ){			
+				playerRelPos = player.o.localToLocal( 0, 0, enemy.o );
+				
+				if ( enemy.o.hitTest( playerRelPos ) ){
+				//	this.resetGame();
 				}
 			}
 						
