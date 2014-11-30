@@ -2,47 +2,19 @@
 
 (function(){
 	
-	var fns, player, enemy, spriteConfig, spriteSheet, stage, keyCodes, speed, pressedKey, framesize, epCollision, releasedKey;
+	var fns, player, enemy, spriteConfig, spriteSheet, stage, keyCodes, 
+	pressedKey, framesize, epCollision, releasedKey, directions;
 	
 	framesize = 64;
 	
-	// All Images / Animations config
+	// Animations config
 	spriteConfig = {
 		 images: ["image/sprite.png"],
 		 frames: {
 			width: 64,
 			height: 64,
 			count: 15
-		 }
-		 /*[
-			 [ 0, 0,   64, 64, 0 ],
-			 [ 0, 74,  64, 64, 0 ],
-			 [ 0, 148, 64, 64, 0 ],
-			 [ 0, 222, 64, 64, 0 ],
-			 [ 0, 296, 64, 64, 0 ],
-			 [ 0, 370, 64, 64, 0 ],
-			 [ 0, 444, 64, 64, 0 ],
-			 [ 0, 518, 64, 64, 0 ],
-			 [ 0, 592, 64, 64, 0 ]
-
-			 [ 0, 0,   64, 64, 0 ],
-			 [ 0, 64,  64, 64, 0 ],
-			 [ 0, 128, 64, 64, 0 ],
-			 [ 0, 192, 64, 64, 0 ],
-			 [ 0, 256, 64, 64, 0 ],
-			 [ 0, 320, 64, 64, 0 ],
-			 [ 0, 384, 64, 64, 0 ],
-			 [ 0, 448, 64, 64, 0 ],
-			 [ 0, 512, 64, 64, 0 ],
-
-			 [ 0, 576, 64, 64, 0 ],
-			 [ 0, 640, 64, 64, 0 ],
-			 [ 0, 704, 64, 64, 0 ],
-			 [ 0, 768, 64, 64, 0 ],
-			 [ 0, 832, 64, 64, 0 ],
-			 [ 0, 896, 64, 64, 0 ]
-			 ]*/
-		 ,
+		 },
 		 animations: {
 			playerMoveLeft : {
 				frames: [ 1, 0 ]
@@ -74,7 +46,7 @@
 		 }
 	};
 	
-	// Game config
+	// Game configuration
 	config = {
 		playArea : {
 			xStart: 0,
@@ -86,7 +58,8 @@
 	
 	// Enemy-Player Collision
 	epCollision = false;
-	
+		
+	// Arrow key code
 	keyCodes = {
 		// Left Arrow Key
 		left: 37, 
@@ -101,9 +74,15 @@
 		down: 40, 
 	};
 	
-	// Speed for player movement in pixels / second
-	speed = 300;
-		
+	// All directions in which objects can move
+	directions = {
+		left: 0,
+		up: 1,
+		right: 2,
+		down: 3
+	};
+	
+	//local functions
 	fns = {
 		/**
 		*	Detects Enemy-Player collision
@@ -137,13 +116,36 @@
 				return false;
 			}
 		},
+		
+		/**
+		*	Restrict the object movements within play-area
+		*
+		*	@method restrictInBounds
+		*/
+		restrictInBounds: function( o ){				
+			// reference to play-area configuration
+			var pa =  config.playArea;
+			
+			if ( o.x < pa.xStart ){
+				o.x = pa.xEnd;
+			} else if ( o.x > pa.xEnd ){
+				o.x = pa.xStart;
+			} else if ( o.y < pa.yStart ){
+				o.y = pa.yEnd;
+			} else if ( o.y > pa.yEnd ){
+				o.y = pa.yStart;
+			}
+		},
 
 		/**
-		*	Plays Enemy animation
+		*	Enemy Movement in play-area
 		*
 		*	@method moveEnemy
 		*/
-		moveEnemy: function( collision ){
+		moveEnemy: function( delta, collision ){
+			// New movement direction
+			var newDirection = -1;
+			
 			if ( !enemy ){
 				return false;
 			}
@@ -158,6 +160,7 @@
 			
 			// Normal state - movement and animation
 			else{
+				// Animation
 				// When Player is moving horizontally
 				if ( pressedKey === keyCodes.left || pressedKey ===  keyCodes.right ){
 					if ( player.o.x <= enemy.o.x ){
@@ -175,19 +178,52 @@
 						enemy.o.gotoAndStop( enemy.look.down );
 					}
 				}
+				
+				// Movement
+				// change direction
+				enemy.deltaTime += delta;
+				if ( enemy.deltaTime >= enemy.changeDirection ){
+					// to start the loop
+					newDirection = enemy.direction;
+					// To ensure newly calculated direction is not same as current direction
+					while( newDirection === enemy.direction ){
+						newDirection = parseInt( Math.random() * 4 );
+					}
+					enemy.direction = newDirection;
+					// reset elapsed time
+					enemy.deltaTime = 0;
+				}
+				
+				switch( enemy.direction ){
+					case directions.left:
+						enemy.o.x -= Math.round( enemy.speed / 1000 * delta );
+					break;
+
+					case directions.up:
+						enemy.o.y -= Math.round( enemy.speed / 1000 * delta );
+					break;
+
+					case directions.right:
+						enemy.o.x += Math.round( enemy.speed / 1000 * delta );
+					break;
+
+					case directions.down:
+						enemy.o.y -= Math.round( enemy.speed / 1000 * delta );
+					break;
+				}
+				
+				// handle out of bounds movement
+				this.restrictInBounds( enemy.o );
 			}
 		},
 
 		/**
-		*	Moves Player, takingcare of collision state
+		*	Player Movement in play-area
 		*
 		*	@method movePlayer
 		*/
 		movePlayer: function( delta, collision ){
 			var pCurrAnim;
-			
-			// reference to play-area config
-			var pa =  config.playArea;
 			
 			if ( !player ){
 				return false;
@@ -210,7 +246,7 @@
 			// when arrow-key is pressed, plays player's moving animation and moves player accordingly
 			switch( pressedKey ){
 				case keyCodes.left:
-					player.o.x -= Math.round( speed / 1000 * delta );
+					player.o.x -= Math.round( player.speed / 1000 * delta );
 					
 					// Play this animation only if some-other animation is playing
 					// OR this animation is in paused state
@@ -220,7 +256,7 @@
 				break;
 
 				case keyCodes.up:
-					player.o.y -= Math.round( speed / 1000 * delta );
+					player.o.y -= Math.round( player.speed / 1000 * delta );
 					
 					// Play this animation only if some-other animation is playing
 					// OR this animation is in paused state
@@ -230,7 +266,7 @@
 				break;
 
 				case keyCodes.right:
-					player.o.x += Math.round( speed / 1000 * delta );
+					player.o.x += Math.round( player.speed / 1000 * delta );
 					
 					// Play this animation only if some-other animation is playing
 					// OR this animation is in paused state
@@ -240,7 +276,7 @@
 				break;
 
 				case keyCodes.down:
-					player.o.y += Math.round( speed / 1000 * delta );
+					player.o.y += Math.round( player.speed / 1000 * delta );
 					
 					// Play this animation only if some-other animation is playing
 					// OR this animation is in paused state
@@ -250,16 +286,8 @@
 				break;				
 			}
 			
-			// Lets player get back in , when it goes out of boundaries
-			if ( player.o.x < pa.xStart ){
-				player.o.x = pa.xEnd;
-			} else if ( player.o.x > pa.xEnd ){
-				player.o.x = pa.xStart;
-			} else if ( player.o.y < pa.yStart ){
-				player.o.y = pa.yEnd;
-			} else if ( player.o.y > pa.yEnd ){
-				player.o.y = pa.yStart;
-			}
+			// handle out of bounds movement
+			this.restrictInBounds( player.o );
 			
 			// when arrow-key is released, stops player's moving animation
 			switch( releasedKey ){
@@ -280,81 +308,9 @@
 				break;				
 			}
 		},
-		
-		/**
-		*	When Images are loaded, create game objects
-		*
-		*	@method hSpriteReady
-		*/
-		hSpriteReady: function(){
-			// Player Object
-			player = {
-				o: new createjs.Sprite(spriteSheet, "playerMoveRight"),
-				move: {
-					left: "playerMoveLeft",
-					up: "playerMoveTop",
-					right:"playerMoveRight",
-					down: "playerMoveBottom"
-				},
-				startAnimation: "playerMoveRight"
-			};
-			
-			// Enemy Object
-			enemy = {
-				o: new createjs.Sprite(spriteSheet, "enemyLookLeft"),
-				look: {
-					left: "enemyLookLeft",
-					up: "enemyLookTop",
-					right: "enemyLookRight",
-					down: "enemyLookBottom"
-				},
-				killed: "enemyKilled",
-				startAnimation: "enemyLookLeft"
-			};
-			
-			// Animation speed
-			enemy.o.framerate = 3;
-			player.o.framerate = 8;
-			
-			// add to stage
-			stage.addChild( enemy.o );
-			stage.addChild( player.o );
-						
-			// Load New Game
-			this.resetGame();
-		},
 
 		/**
-		*	Resets Game stage
-		*
-		*	@method resetGame
-		*/
-		resetGame: function( e ){
-			if ( !player || !enemy ){
-				return false;
-			}
-			
-			// Player's Starting position
-			player.o.x = 10;
-			player.o.y = 10;
-
-			// Enemy's Starting position
-			enemy.o.x = 200;
-			enemy.o.y = 200;
-			
-			// Objects starting Animations
-			player.o.gotoAndStop( player.startAnimation );
-			enemy.o.gotoAndStop( enemy.startAnimation );
-			
-			// Unset Enemy-player collision
-			epcollision = false;
-			
-			// Unset arrow keys state
-			pressedKey = releasedKey = null;
-		},
-
-		/**
-		*	To track pressed key
+		*	To track currently pressed Arrow key
 		*
 		*	@method hKeyDown
 		*/
@@ -371,26 +327,20 @@
 		},
 
 		/**
-		*	To Stop Player's movement animation
+		*	To track currently released Arrow key
 		*
 		*	@method hKeyUp
 		*/
 		hKeyUp: function( e ){
 			// Equality check to ensure we always unset last pressedKey
-			// eg: you press left-arrow key and without releasing it press right-arrow
-			// and then you release right-arrow
-			// this check ensures to skip left-arrow key and only unsets when you release
-			// right-arrow
 			if ( e.keyCode === pressedKey ){
 				releasedKey = pressedKey;
-				
-				// To stop players movement
 				pressedKey = null;			
 			}	
 		},
 
 		/**
-		*	When Enemy is killed, reset game
+		*	Enemy Killed handler
 		*
 		*	@method hEnemyKilled
 		*/
@@ -399,7 +349,8 @@
 		},
 		
 		/**
-		*	This method is called after every tick. This is the main method where all business logic goes
+		*	This method is called after every tick.
+		*	This is the main method where all game logic goes
 		*
 		*	@method hRenderGame
 		*/
@@ -414,7 +365,7 @@
 			collision = this.isCollision();
 						
 			// Enemy movement
-			this.moveEnemy( collision );				
+			this.moveEnemy( delta, collision );				
 						
 			// Player's movement based on Arrow keys
 			this.movePlayer( delta, collision );
@@ -427,7 +378,7 @@
 		},
 
 		/**
-		*	Bind all Events
+		*	Bind Events
 		*
 		*	@method bindEvents
 		*/
@@ -441,6 +392,106 @@
 			
 			// registers animation complete event, useful for doing tasks post player-enemy collision
 			enemy.o.on( "animationend", this.hEnemyKilled, this );
+		},
+
+		/**
+		*	Resets Game
+		*
+		*	@method resetGame
+		*/
+		resetGame: function( e ){
+			if ( !player || !enemy ){
+				return false;
+			}
+			
+			// Player's Starting position
+			player.o.x = 10;
+			player.o.y = config.playArea.yEnd - 100;
+
+			// Enemy's Starting position
+			enemy.o.x = config.playArea.xEnd - 300;
+			enemy.o.y = 50;
+			
+			// Objects starting Animations
+			player.o.gotoAndStop( player.start );
+			enemy.o.gotoAndStop( enemy.start );
+			
+			// Unset Enemy-player collision
+			epcollision = false;
+			
+			// Unset arrow keys state
+			pressedKey = releasedKey = null;
+		},
+		
+		/**
+		*	Handler called after images are loaded.
+		*	create game objects here.
+		*
+		*	@method hSpriteReady
+		*/
+		hSpriteReady: function(){
+			// Player Object
+			player = {
+				// createjs object
+				o: new createjs.Sprite(spriteSheet, "playerMoveRight"),
+				
+				// moving around animations
+				move: {
+					left: "playerMoveLeft",
+					up: "playerMoveTop",
+					right:"playerMoveRight",
+					down: "playerMoveBottom"
+				},
+				
+				// Starting animation
+				start: "playerMoveRight",
+				
+				// Movement speed
+				speed: 600
+			};
+			
+			// Enemy Object
+			enemy = {
+				// createjs object
+				o: new createjs.Sprite(spriteSheet, "enemyLookLeft"),
+				
+				// looking around animations
+				look: {
+					left: "enemyLookLeft",
+					up: "enemyLookTop",
+					right: "enemyLookRight",
+					down: "enemyLookBottom"
+				},
+				
+				// killed animation
+				killed: "enemyKilled",
+				
+				// starting animation
+				start: "enemyLookLeft",
+				
+				// current movement direction
+				direction: directions.left,
+				
+				// movement speed
+				speed: 500,
+				
+				// automatically changes direction after this time ( in ms )
+				changeDirection: 500,
+				
+				// elapsed time since last direction change
+				deltaTime: 0
+			};
+			
+			// Set Animation speed
+			enemy.o.framerate = 3;
+			player.o.framerate = 8;
+			
+			// add to stage
+			stage.addChild( enemy.o );
+			stage.addChild( player.o );
+						
+			// Load New Game
+			this.resetGame();
 		},
 		
 		/**
@@ -480,6 +531,6 @@
 		}
 	};
 	
-	// Start game
+	// Start
 	fns.init();
 }());
