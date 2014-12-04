@@ -3,8 +3,9 @@
 (function(){
 	
 	var fns, player, enemy, spriteConfig, spriteSheet, stage, keyCodes, 
-	pressedKey, framesize, epCollision, releasedKey, directions;
+	pressedKey, framesize, epCollision, releasedKey, directions, config;
 	
+	// Each Frame size
 	framesize = 64;
 	
 	// Animations config
