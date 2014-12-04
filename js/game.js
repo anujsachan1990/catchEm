@@ -180,8 +180,7 @@
 					}
 				}
 				
-				// Movement
-				// change direction
+				// Change Enemy's Direction, after predefined time elapses
 				enemy.deltaTime += delta;
 				if ( enemy.deltaTime >= enemy.changeDirection ){
 					// to start the loop
@@ -195,6 +194,7 @@
 					enemy.deltaTime = 0;
 				}
 				
+				// To Move enemy around
 				switch( enemy.direction ){
 					case directions.left:
 						enemy.o.x -= Math.round( enemy.speed / 1000 * delta );
@@ -213,7 +213,7 @@
 					break;
 				}
 				
-				// handle out of bounds movement
+				// Handle's out of bounds movement
 				this.restrictInBounds( enemy.o );
 			}
 		},
