@@ -239,8 +239,15 @@
 			
 			// In collision state, stop player - movement and animation
 			if ( collision ){
+				// This is to stop player movements during collision
 				releasedKey = pressedKey;
 				pressedKey = null;
+				
+				// This forces player not to change its directions during collision
+				// even when user is pressing arrow keys
+				if ( epCollision ){
+					releasedKey = null;
+				}
 			}
 			
 			// when arrow-key is pressed, plays player's moving animation and moves player accordingly
